@@ -1,0 +1,12 @@
+body {
+    font-family: "Segoe UI", sans-serif;
+}
+
+.card, .alert {
+    border-radius: 15px;
+}
+
+#map {
+    height: 350px;
+    border-radius: 15px;
+}

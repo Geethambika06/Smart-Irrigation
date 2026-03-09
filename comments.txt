@@ -1,0 +1,25 @@
+For installation:
+
+cd C:\project\smart-irrigation
+
+conda create -n pyenv python=3.9
+
+conda activate pyenv
+
+pip install pandas
+
+pip install scikit-learn
+
+pip install flask
+
+pip install xgboost
+
+
+
+For running prediction:
+
+cd C:\project\smart-irrigation
+
+conda activate pyenv
+
+python app.py

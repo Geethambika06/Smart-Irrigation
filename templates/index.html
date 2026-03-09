@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Irrigation Dashboard</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-4">
+
+    <div class="text-center mb-4">
+        <h1 class="fw-bold text-success">
+            <i class="fa-solid fa-seedling"></i> Smart Irrigation System
+        </h1>
+        <p class="text-muted">
+            <i class="fa-solid fa-brain"></i> AI-Based Soil & Water Management
+        </p>
+    </div>
+
+    <!-- Input Card -->
+    <div class="card shadow p-4">
+        <form method="POST" class="row g-3">
+
+            <div class="col-md-3">
+                <label class="form-label">
+                    <i class="fa-solid fa-temperature-half text-danger"></i> Temperature (°C)
+                </label>
+                <input type="number" step="0.01" name="temperature" class="form-control" required>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">
+                    <i class="fa-solid fa-gauge-high text-primary"></i> Pressure
+                </label>
+                <input type="number" step="0.01" name="pressure" class="form-control" required>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">
+                    <i class="fa-solid fa-mountain text-warning"></i> Altitude
+                </label>
+                <input type="number" step="0.01" name="altitude" class="form-control" required>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">
+                    <i class="fa-solid fa-droplet text-info"></i> Soil Moisture
+                </label>
+                <input type="number" name="soil_moisture" class="form-control" required>
+            </div>
+
+            <div class="col-12 text-center mt-3">
+                <button class="btn btn-success btn-lg">
+                    <i class="fa-solid fa-microchip"></i> Predict
+                </button>
+            </div>
+        </form>
+    </div>
+
+{% if prediction %}
+    <!-- Results -->
+    <div class="row mt-4">
+
+        <div class="col-md-6">
+            <div class="alert alert-info shadow text-center">
+                <h4><i class="fa-solid fa-leaf"></i> Soil Condition</h4>
+                <h2 class="fw-bold">{{ prediction }}</h2>
+            </div>
+
+            <div class="alert {% if irrigation_status == 'PUMP ON' %}alert-danger{% else %}alert-success{% endif %} shadow text-center">
+                <h4><i class="fa-solid fa-faucet-drip"></i> Irrigation</h4>
+                <h2 class="fw-bold">{{ irrigation_status }}</h2>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <canvas id="barChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Gauges -->
+    <div class="row mt-4 text-center">
+        <div class="col-md-3"><canvas id="tempGauge"></canvas></div>
+        <div class="col-md-3"><canvas id="pressureGauge"></canvas></div>
+        <div class="col-md-3"><canvas id="altitudeGauge"></canvas></div>
+        <div class="col-md-3"><canvas id="soilGauge"></canvas></div>
+    </div>
+
+    <!-- Map -->
+    <div class="card shadow mt-4 p-3">
+        <h5 class="fw-bold text-center">
+            <i class="fa-solid fa-map-location-dot"></i> Irrigation Zone Map
+        </h5>
+        <div id="map"></div>
+    </div>
+{% endif %}
+</div>
+
+{% if input_data %}
+<script>
+const sensor = {{ input_data }};
+
+// BAR CHART
+new Chart(document.getElementById("barChart"), {
+    type: "bar",
+    data: {
+        labels: ["Temp", "Pressure", "Altitude", "Soil"],
+        datasets: [{
+            data: sensor,
+            backgroundColor: ["#ff6384","#36a2eb","#ffcd56","#4bc0c0"]
+        }]
+    },
+    options: { plugins: { legend: { display: false }}}
+});
+
+// GAUGE FUNCTION
+function gauge(id, value, max, label, color) {
+    new Chart(document.getElementById(id), {
+        type: "doughnut",
+        data: { datasets: [{ data: [value, max-value], backgroundColor: [color,"#eee"] }] },
+        options: {
+            cutout: "75%",
+            plugins: {
+                legend: { display: false },
+                title: { display: true, text: label + ": " + value }
+            }
+        }
+    });
+}
+
+gauge("tempGauge", sensor[0], 50, "🌡 Temp", "#ff6384");
+gauge("pressureGauge", sensor[1], 10500, "⏱ Pressure", "#36a2eb");
+gauge("altitudeGauge", sensor[2], 100, "⛰ Altitude", "#ffcd56");
+gauge("soilGauge", sensor[3], 500, "💧 Soil", "#4bc0c0");
+
+// MAP
+let color = "{{ prediction }}" === "Very Dry" ? "red" :
+            "{{ prediction }}" === "Dry" ? "orange" : "green";
+
+const map = L.map('map').setView([17.385, 78.486], 14);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+L.circle([17.385, 78.486], {
+    color: color,
+    fillColor: color,
+    fillOpacity: 0.4,
+    radius: 600
+}).addTo(map).bindPopup(
+    "<b>Condition:</b> {{ prediction }}<br><b>Status:</b> {{ irrigation_status }}"
+).openPopup();
+</script>
+{% endif %}
+
+</body>
+</html>
